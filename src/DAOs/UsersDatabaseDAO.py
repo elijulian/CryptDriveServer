@@ -5,6 +5,7 @@ from Dependencies.Constants import server_storage_path
 
 db_path = os.path.join(server_storage_path, "Users.db")
 users_db = peewee.SqliteDatabase(db_path)
+os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
 class UsersDB(peewee.Model):
     user_id = peewee.AutoField()

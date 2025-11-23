@@ -1,14 +1,14 @@
 import logging
 import uuid
 
-from DAOs import FilesDatabaseDAO
+from DAOs.FilesDatabaseDAO import FilesDatabaseDAO
 from DAOs.FilesDiskDAO import FilesDiskDAO
 from Services.UsersService import UsersService
 
 
 class FileService:
     def __init__(self, users_service: UsersService):
-        self.files_database_dao = FilesDatabaseDAO.FilesDatabaseDAO()
+        self.files_database_dao = FilesDatabaseDAO()
         self.files_disk_dao = FilesDiskDAO()
         self.users_service = users_service
 
@@ -95,7 +95,9 @@ class FileService:
     def get_file_contents(self, file_owner, user_file_path, file_name):
         logging.debug(f"Getting file contents for {file_owner}@{user_file_path}/{file_name}.")
         file_owner_id = self.users_service.get_user_id(file_owner)
+        logging.debug(f"{file_owner} user id: {file_owner_id} \n Getting file uuid...")
         file_uuid = self.files_database_dao.get_file_uuid(file_owner_id, user_file_path, file_name)
+        logging.debug(f"File uuid: {file_uuid}\n Getting file contents from disk...")
         file_contents = self.files_disk_dao.get_file_contents(file_owner_id, file_uuid)
         return file_contents
 
