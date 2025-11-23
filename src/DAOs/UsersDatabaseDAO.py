@@ -1,7 +1,7 @@
 import logging
 import os
 import peewee
-from Dependencies.Constants import server_storage_path
+from src.Dependencies.Constants import server_storage_path
 
 db_path = os.path.join(server_storage_path, "Users.db")
 users_db = peewee.SqliteDatabase(db_path)

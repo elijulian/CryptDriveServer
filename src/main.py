@@ -7,9 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from Dependencies.Constants import *
 from Dependencies.VerbDictionary import Verbs
-from Server.Services.ServerFileService import FileService
-from Server.Services.TokensService import TokensService
-from Server.Services.UsersService import UsersService
+from src.Services.ServerFileService import FileService
+from src.Services.TokensService import TokensService
+from src.Services.UsersService import UsersService
 
 
 class ServerClass:
@@ -32,7 +32,7 @@ class ServerClass:
 
     def server_listen(self):
         self.server.listen(100)
-        logging.info(f"Server Listening On: {self.host_addr}")
+        logging.info(f"src Listening On: {self.host_addr}")
         try:
             while self.is_server_running:
                 client, client_addr = self.server.accept()
@@ -41,7 +41,7 @@ class ServerClass:
         except KeyboardInterrupt:
             self.server_close()
         finally:
-            logging.info("Server Closed.")
+            logging.info("src Closed.")
 
 
     def begin_client_communication(self, client, client_addr):

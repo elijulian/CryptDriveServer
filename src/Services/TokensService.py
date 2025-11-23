@@ -3,7 +3,7 @@ import time
 
 from jwt import DecodeError
 
-from Dependencies.Constants import private_key, public_key
+from src.Dependencies.Constants import private_key, public_key
 
 
 class TokensService:

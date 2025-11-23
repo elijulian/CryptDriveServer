@@ -1,6 +1,6 @@
 import logging
 
-from Server.DAOs.UsersDatabaseDAO import UsersDatabaseDAO
+from src.DAOs.UsersDatabaseDAO import UsersDatabaseDAO
 
 
 class UsersService:
