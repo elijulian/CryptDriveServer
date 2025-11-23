@@ -1,7 +1,7 @@
 import logging
 import os
 
-from src.Dependencies.Constants import server_storage_path
+from Dependencies.Constants import server_storage_path
 
 
 class FilesDiskDAO:

@@ -7,9 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from Dependencies.Constants import *
 from Dependencies.VerbDictionary import Verbs
-from src.Services.ServerFileService import FileService
-from src.Services.TokensService import TokensService
-from src.Services.UsersService import UsersService
+from Services.ServerFileService import FileService
+from Services.TokensService import TokensService
+from Services.UsersService import UsersService
 
 
 class ServerClass:

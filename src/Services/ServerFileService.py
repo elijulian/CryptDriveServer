@@ -1,9 +1,9 @@
 import logging
 import uuid
 
-from src.DAOs import FilesDatabaseDAO
-from src.DAOs.FilesDiskDAO import FilesDiskDAO
-from src.Services.UsersService import UsersService
+from DAOs import FilesDatabaseDAO
+from DAOs.FilesDiskDAO import FilesDiskDAO
+from Services.UsersService import UsersService
 
 
 class FileService:
