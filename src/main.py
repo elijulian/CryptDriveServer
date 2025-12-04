@@ -155,6 +155,43 @@ class ServerClass:
                         response = self.write_message("ERROR", client_token, "DIR_NOT_FOUND")
                 else:
                     response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
+
+            case Verbs.RENAME_FILE.value:
+                if is_token_valid:
+                    if self.file_service.rename_file(username, data[0], data[1], data[2]):
+                        response = self.write_message("SUCCESS", client_token)
+                    else:
+                        response = self.write_message("ERROR", client_token, "FILE_NOT_FOUND_OR_ALREADY_EXISTS")
+                else:
+                    response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
+
+            case Verbs.RENAME_DIR.value:
+                if is_token_valid:
+                    if self.file_service.rename_dir(username, data[0], data[1], data[2]):
+                        response = self.write_message("SUCCESS", client_token)
+                    else:
+                        response = self.write_message("ERROR", client_token, "DIR_NOT_FOUND_OR_ALREADY_EXISTS")
+                else:
+                    response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
+
+            case Verbs.MOVE_FILE.value:
+                if is_token_valid:
+                    if self.file_service.move_file(username, data[0], data[1], data[2]):
+                        response = self.write_message("SUCCESS", client_token)
+                    else:
+                        response = self.write_message("ERROR", client_token, "FILE_NOT_FOUND_OR_ALREADY_EXISTS")
+                else:
+                    response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
+
+            case Verbs.MOVE_DIR.value:
+                if is_token_valid:
+                    if self.file_service.move_dir(username, data[0], data[1], data[2]):
+                        response = self.write_message("SUCCESS", client_token)
+                    else:
+                        response = self.write_message("ERROR", client_token, "DIR_NOT_FOUND_OR_ALREADY_EXISTS")
+                else:
+                    response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
+
             case _:
                 logging.debug("Invalid Verb")
         logging.debug(f"Sending Response: {response}")

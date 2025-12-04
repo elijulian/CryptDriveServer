@@ -5,6 +5,8 @@ from Dependencies.Constants import server_storage_path
 
 db_path = os.path.join(server_storage_path, "Files.db")
 files_db = peewee.SqliteDatabase(db_path)
+# shared_db_path = os.path.join(server_storage_path, "SharedFiles.db")
+# shared_files_db = peewee.SqliteDatabase(shared_db_path)
 
 class FilesDB(peewee.Model):
     file_id = peewee.AutoField()
@@ -19,6 +21,16 @@ class FilesDB(peewee.Model):
         database = files_db
         indexes = (
         (("file_owner_id", "user_file_path", "user_file_name", "is_directory"), True),)
+
+# class FilesSharedDB(peewee.Model):
+#     share_id = peewee.AutoField()
+#     file_owner_id = peewee.IntegerField()
+#
+#
+#     class Meta:
+#         database = files_db
+#         indexes = (
+#             (("file_owner_id", "user_file_path", "user_file_name", "is_directory"), True),)
 
 
 class FilesDatabaseDAO:
@@ -124,6 +136,23 @@ class FilesDatabaseDAO:
             FilesDB.user_file_name == dir_name,
             FilesDB.is_directory == True
         ).exists()
+
+    def rename_and_move_file(self, file_owner_id, old_user_file_path, new_user_file_path, old_user_file_name, new_user_file_name):
+        FilesDB.update(user_file_path=new_user_file_path, user_file_name=new_user_file_name).where(
+            FilesDB.file_owner_id == file_owner_id,
+            FilesDB.user_file_path == old_user_file_path,
+            FilesDB.user_file_name == old_user_file_name,
+            FilesDB.is_directory == False
+        ).execute()
+
+    def rename_and_move_dir(self, file_owner_id, old_user_file_path, new_user_file_path, old_user_file_name, new_user_file_name):
+        FilesDB.update(user_file_path=new_user_file_path, user_file_name=new_user_file_name).where(
+            FilesDB.file_owner_id == file_owner_id,
+            FilesDB.user_file_path == old_user_file_path,
+            FilesDB.user_file_name == old_user_file_name,
+            FilesDB.is_directory == True
+        ).execute()
+
 
     def close_db(self):
         files_db.close()

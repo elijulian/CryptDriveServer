@@ -14,7 +14,7 @@ class FileService:
 
     def create_file(self, file_owner, user_file_path, user_file_name, file_contents):
         file_owner_id = self.users_service.get_user_id(file_owner)
-        logging.debug(f"Creating file for {file_owner}@{user_file_path}/{user_file_name}.")
+        logging.debug(f"Creating file for {file_owner}@{user_file_path if user_file_path != "/" else ""}/{user_file_name}.")
         if self.can_create_file(file_owner, user_file_path, user_file_name):
             # write to disk
             file_uuid = self._file_uuid_generator()
@@ -48,7 +48,7 @@ class FileService:
             parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
             self.files_database_dao.decrease_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
 
-            logging.debug(f"File {user_file_path}/{user_file_name} deleted.")
+            logging.debug(f"File {user_file_path if user_file_path != "/" else ""}/{user_file_name} deleted.")
             return True
         else:
             logging.error("File does not exist.")
@@ -64,7 +64,7 @@ class FileService:
             parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
             self.files_database_dao.increase_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
 
-            logging.debug(f"Directory {user_file_path}/{user_file_name} created.")
+            logging.debug(f"Directory {user_file_path if user_file_path != "/" else ""}/{user_file_name} created.")
             return True
         else:
             logging.debug("Directory already exists.")
@@ -74,10 +74,10 @@ class FileService:
         file_owner_id = self.users_service.get_user_id(file_owner)
         if self.files_database_dao.does_dir_exist(file_owner_id, user_file_path, user_file_name):
             # delete files
-            for file in self.files_database_dao.get_all_files_in_path(file_owner_id, user_file_path):
+            for file in self.files_database_dao.get_all_files_in_path(file_owner_id, user_file_path + user_file_name):
                 self.delete_file(file_owner, file.user_file_path, file.user_file_name)
             # delete subdirectories
-            for directory in self.files_database_dao.get_all_dirs_in_path(file_owner_id, f"{user_file_path}/{user_file_name}"):
+            for directory in self.files_database_dao.get_all_dirs_in_path(file_owner_id, f"{user_file_path if user_file_path != "/" else ""}/{user_file_name}"):
                 self.delete_dir(file_owner, directory.user_file_path, directory.user_file_name)
             # delete from database
             self.files_database_dao.delete_dir(file_owner_id, user_file_path, user_file_name)
@@ -86,10 +86,81 @@ class FileService:
             parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
             self.files_database_dao.decrease_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
 
-            logging.debug(f"Directory {user_file_path}/{user_file_name} deleted.")
+            logging.debug(f"Directory {user_file_path if user_file_path != "/" else ""}/{user_file_name} deleted.")
             return True
         else:
             logging.debug("Directory does not exist.")
+            return False
+
+    def rename_file(self, file_owner, user_file_path, old_user_file_name, new_user_file_name):
+        file_owner_id = self.users_service.get_user_id(file_owner)
+        if self.files_database_dao.does_file_exist(file_owner_id, user_file_path, old_user_file_name) and not self.files_database_dao.does_file_exist(file_owner_id, user_file_path, new_user_file_name):
+            logging.debug(f"Renaming file {old_user_file_name} to {new_user_file_name}.")
+            self.files_database_dao.rename_and_move_file(
+                file_owner_id=file_owner_id,
+                old_user_file_path=user_file_path,
+                new_user_file_path=user_file_path,
+                old_user_file_name=old_user_file_name,
+                new_user_file_name=new_user_file_name
+            )
+            return True
+        else:
+            logging.error("File cannot be renamed. Either it does not exist or a file with the new name already exists.")
+            return False
+
+    def move_file(self, file_owner, old_user_file_path, new_user_file_path, file_name):
+        file_owner_id = self.users_service.get_user_id(file_owner)
+        if self.files_database_dao.does_file_exist(file_owner_id, old_user_file_path, file_name):
+            logging.debug(f"Moving file from {old_user_file_path} to {new_user_file_path}.")
+            self.files_database_dao.rename_and_move_file(
+                file_owner_id=file_owner_id,
+                old_user_file_path=old_user_file_path,
+                new_user_file_path=new_user_file_path,
+                old_user_file_name=file_name,
+                new_user_file_name=file_name
+            )
+            return True
+        else:
+            logging.error("File cannot be moved. Either it does not exist or a file with the new name already exists.")
+            return False
+
+    def rename_dir(self, file_owner, dir_path, old_dir_name, new_dir_name):
+        file_owner_id = self.users_service.get_user_id(file_owner)
+        if self.files_database_dao.does_dir_exist(file_owner_id, dir_path, old_dir_name) and not self.files_database_dao.does_dir_exist(file_owner_id, dir_path, new_dir_name):
+            logging.debug(f"Renaming directory {old_dir_name} to {new_dir_name}. \nGetting all files in directory...")
+            for file in self.files_database_dao.get_all_files_in_path(file_owner_id, f"{dir_path if dir_path != "/" else ""}/{old_dir_name}"):
+                self.files_database_dao.rename_and_move_file(
+                    file_owner_id=file_owner_id,
+                    old_user_file_path=file.user_file_path,
+                    new_user_file_path=f"{dir_path if dir_path != "/" else ""}/{new_dir_name}",
+                    old_user_file_name=file.user_file_name,
+                    new_user_file_name=file.user_file_name
+                )
+
+            self.files_database_dao.rename_and_move_dir(file_owner_id, dir_path, old_dir_name, new_dir_name)
+            return True
+        else:
+            logging.error("Directory cannot be renamed. Either it does not exist or a directory with the new name already exists.")
+            return False
+
+    def move_dir(self, file_owner, old_dir_path, new_dir_path, dir_name):
+        file_owner_id = self.users_service.get_user_id(file_owner)
+        if self.files_database_dao.does_dir_exist(file_owner_id, old_dir_path, dir_name) and not self.files_database_dao.does_dir_exist(file_owner_id, new_dir_path, dir_name):
+            logging.debug(f"Moving directory {dir_name} form {old_dir_path} to {new_dir_path}. \nGetting all files in directory...")
+            for file in self.files_database_dao.get_all_files_in_path(file_owner_id,f"{old_dir_path if old_dir_path != "/" else ""}/{dir_name}"):
+                self.files_database_dao.rename_and_move_file(
+                    file_owner_id=file_owner_id,
+                    old_user_file_path=file.user_file_path,
+                    new_user_file_path=f"{new_dir_path if new_dir_path != "/" else ""}/{dir_name}",
+                    old_user_file_name=file.user_file_name,
+                    new_user_file_name=file.user_file_name
+                )
+
+            self.files_database_dao.rename_and_move_dir(file_owner_id, old_dir_path, dir_name, dir_name)
+            return True
+        else:
+            logging.error(
+                "Directory cannot be moved. Either it does not exist or a directory with the new name already exists.")
             return False
 
     def get_file_contents(self, file_owner, user_file_path, file_name):
