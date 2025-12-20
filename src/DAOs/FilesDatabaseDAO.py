@@ -75,22 +75,6 @@ class FilesDatabaseDAO:
         ).execute()
         logging.debug(f"Directory {user_dir_name} deleted from {file_owner_id}/{user_dir_path} in the Database.")
 
-    def increase_dir_item_count(self, owner_id, path, name):
-        FilesDB.update(file_size=FilesDB.file_size+1).where(
-            FilesDB.file_owner_id == owner_id,
-            FilesDB.user_file_path == path,
-            FilesDB.user_file_name == name,
-            FilesDB.is_directory == True
-        ).execute()
-
-    def decrease_dir_item_count(self, owner_id, path, name):
-        FilesDB.update(file_size=FilesDB.file_size-1).where(
-            FilesDB.file_owner_id == owner_id,
-            FilesDB.user_file_path == path,
-            FilesDB.user_file_name == name,
-            FilesDB.is_directory == True
-        ).execute()
-
     def get_file_uuid(self, file_owner_id, user_file_path, user_file_name):
         return FilesDB.select().where(
             FilesDB.file_owner_id == file_owner_id,
@@ -120,6 +104,12 @@ class FilesDatabaseDAO:
             FilesDB.user_file_path == path,
             FilesDB.is_directory == True
         ))
+
+    def get_item_count_for_dir(self, file_owner_id, path):
+        return len(list(FilesDB.select().where(
+            FilesDB.file_owner_id == file_owner_id,
+            FilesDB.user_file_path == path,
+        )))
 
     def does_dir_exist(self, file_owner_id, dir_path, dir_name):
         return FilesDB.select().where(

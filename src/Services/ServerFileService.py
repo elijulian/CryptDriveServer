@@ -24,10 +24,6 @@ class FileService:
             file_size = self.files_disk_dao.get_file_size_on_disk(file_owner_id, file_uuid)
             self.files_database_dao.create_file(file_owner_id, user_file_path, file_uuid, user_file_name, file_size)
 
-            # update parent dir item count
-            parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
-            self.files_database_dao.increase_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
-
             logging.debug(f"File {user_file_name} created.")
             return True
         else:
@@ -44,10 +40,6 @@ class FileService:
             # delete from database
             self.files_database_dao.delete_file(file_owner_id, user_file_path, user_file_name)
 
-            # update parent dir item count
-            parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
-            self.files_database_dao.decrease_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
-
             logging.debug(f"File {user_file_path if user_file_path != "/" else ""}/{user_file_name} deleted.")
             return True
         else:
@@ -59,10 +51,6 @@ class FileService:
         if not self.files_database_dao.does_dir_exist(file_owner_id, user_file_path, user_file_name):
             # create in database
             self.files_database_dao.create_dir(file_owner_id, user_file_path, user_file_name)
-
-            # update parent dir item count
-            parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
-            self.files_database_dao.increase_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
 
             logging.debug(f"Directory {user_file_path if user_file_path != "/" else ""}/{user_file_name} created.")
             return True
@@ -81,10 +69,6 @@ class FileService:
                 self.delete_dir(file_owner, directory.user_file_path, directory.user_file_name)
             # delete from database
             self.files_database_dao.delete_dir(file_owner_id, user_file_path, user_file_name)
-
-            # update parent dir item count
-            parent_dir_name, parent_dir_path = self._get_parent_dir_name_and_path(user_file_path)
-            self.files_database_dao.decrease_dir_item_count(file_owner_id, parent_dir_path, parent_dir_name)
 
             logging.debug(f"Directory {user_file_path if user_file_path != "/" else ""}/{user_file_name} deleted.")
             return True
@@ -119,10 +103,6 @@ class FileService:
                 old_user_file_name=file_name,
                 new_user_file_name=file_name
             )
-            old_parent_dir_name, old_parent_dir_path = self._get_parent_dir_name_and_path(old_user_file_path)
-            self.files_database_dao.decrease_dir_item_count(file_owner_id, old_parent_dir_path, old_parent_dir_name)
-            new_parent_dir_name, new_parent_dir_path = self._get_parent_dir_name_and_path(new_user_file_path)
-            self.files_database_dao.increase_dir_item_count(file_owner_id, new_parent_dir_path, new_parent_dir_name)
             return True
         else:
             logging.error("File cannot be moved. Either it does not exist or a file with the new name already exists.")
@@ -150,8 +130,14 @@ class FileService:
     def move_dir(self, file_owner, old_parent_dir_path, new_parent_dir_path, dir_name):
         file_owner_id = self.users_service.get_user_id(file_owner)
         if self.files_database_dao.does_dir_exist(file_owner_id, old_parent_dir_path, dir_name) and not self.files_database_dao.does_dir_exist(file_owner_id, new_parent_dir_path, dir_name):
-            logging.debug(f"Moving directory {dir_name} form {old_parent_dir_path} to {new_parent_dir_path}. \nGetting all files in directory...")
-            files = list(self.files_database_dao.get_all_files_in_path(file_owner_id,f"{old_parent_dir_path if old_parent_dir_path != "/" else ""}/{dir_name}"))
+            logging.debug(f"Moving directory {dir_name} from {old_parent_dir_path} to {new_parent_dir_path}. \nGetting all files in directory...")
+            self.files_database_dao.rename_and_move_dir(file_owner_id, old_parent_dir_path, new_parent_dir_path, dir_name, dir_name)
+
+            dirs = self.files_database_dao.get_all_dirs_in_path(file_owner_id, f"{old_parent_dir_path if old_parent_dir_path != "/" else ""}/{dir_name}")
+            for directory in dirs:
+                self.move_dir(file_owner, f"{old_parent_dir_path if old_parent_dir_path != "/" else ""}/{dir_name}", f"{new_parent_dir_path if new_parent_dir_path != "/" else ""}/{dir_name}", directory.user_file_name)
+
+            files = self.files_database_dao.get_all_files_in_path(file_owner_id,f"{old_parent_dir_path if old_parent_dir_path != "/" else ""}/{dir_name}")
             for file in files:
                 self.files_database_dao.rename_and_move_file(
                     file_owner_id=file_owner_id,
@@ -160,15 +146,9 @@ class FileService:
                     old_user_file_name=file.user_file_name,
                     new_user_file_name=file.user_file_name
                 )
-            self.files_database_dao.rename_and_move_dir(file_owner_id, old_parent_dir_path, new_parent_dir_path, dir_name, dir_name)
-            old_parent_dir_name, old_parent_dir_path = self._get_parent_dir_name_and_path(old_parent_dir_path)
-            self.files_database_dao.decrease_dir_item_count(file_owner_id, old_parent_dir_path, old_parent_dir_name)
-            new_parent_dir_name, new_parent_dir_path = self._get_parent_dir_name_and_path(new_parent_dir_path)
-            self.files_database_dao.increase_dir_item_count(file_owner_id, new_parent_dir_path, new_parent_dir_name)
             return True
         else:
-            logging.error(
-                "Directory cannot be moved. Either it does not exist or a directory with the new name already exists.")
+            logging.error("Directory cannot be moved. Either it does not exist or a directory with the new name already exists.")
             return False
 
     def get_file_contents(self, file_owner, user_file_path, file_name):
@@ -189,8 +169,9 @@ class FileService:
         logging.debug(f"Dirs in path: {dirs_in_path}")
 
         directories_list = []
-        for directory in dirs_in_path:
-            temp_dir = Directory(f"{directory.user_file_path}/{directory.user_file_name}" if directory.user_file_path != "/" else f"/{directory.user_file_name}", directory.file_size)
+        for d in dirs_in_path:
+            temp_path = f"{d.user_file_path if d.user_file_path != "/" else ""}/{d.user_file_name}"
+            temp_dir = Directory(temp_path, self.files_database_dao.get_item_count_for_dir(file_owner_id ,temp_path))
             logging.debug(f"Temp dir: {temp_dir.__dict__}")
             directories_list.append(temp_dir)
         logging.debug(f"Dirs list: {[directory.__dict__ for directory in directories_list]}")

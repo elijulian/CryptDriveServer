@@ -214,11 +214,11 @@ class ServerClass:
             logging.debug("Waiting for Data")
             data_received = self.receive_data(client)
             if self.file_service.create_file(username, data[0], data[1], data_received):
-                self.respond_to_client(client, self.write_message("SUCCESS", client_token, "FILE_CREATED"))
+                self.respond_to_client(client, self.write_message("SUCCESS", client_token, "FILE_CREATED").encode())
             else:
-                self.respond_to_client(client, self.write_message("ERROR", client_token, "FILE_NOT_CREATED"))
+                self.respond_to_client(client, self.write_message("ERROR", client_token, "FILE_NOT_CREATED").encode())
 
-    def respond_to_client(self, client, message):
+    def respond_to_client(self, client, message: bytes):
         message += end_flag
         client.sendall(message)
         logging.debug("Sent Response")
