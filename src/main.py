@@ -93,7 +93,7 @@ class ServerClass:
         logging.debug(f"Message parts: {message_parts}")
         verb = message_parts[0]
         client_token = message_parts[1]
-        data = message_parts[2:len(message_parts)]
+        data = message_parts[2:]
         return client_token, data, verb
 
     def handle_response(self, client_token, data, needs_file_contents, response, response_data,
@@ -104,10 +104,10 @@ class ServerClass:
 
         self.send_initial_response(response, response_data, secure_communication_manager)
 
-        self.send_data_if_needed(client_token, data, needs_file_contents, secure_communication_manager, username)
+        self.recieve_data_if_needed(client_token, data, needs_file_contents, secure_communication_manager, username)
 
-    def send_data_if_needed(self, client_token, data, needs_file_contents,
-                            secure_communication_manager: SecureCommunicationManager, username):
+    def recieve_data_if_needed(self, client_token, data, needs_file_contents,
+                               secure_communication_manager: SecureCommunicationManager, username):
         if needs_file_contents:
             logging.debug("Waiting for Data")
             data_received = secure_communication_manager.receive_data()
@@ -160,7 +160,7 @@ class ServerClass:
                                                                  needs_file_contents, response, username)
 
             case Verbs.DELETE_FILE.value:
-                response = self.delete_filter(client_token, data, is_token_valid, response, username)
+                response = self.delete_file(client_token, data, is_token_valid, response, username)
 
             case Verbs.CREATE_DIR.value:
                 response = self.create_dir(client_token, data, is_token_valid, response, username)
@@ -246,7 +246,7 @@ class ServerClass:
             response = self.write_message("ERROR", client_token, "INVALID_TOKEN")
         return response
 
-    def delete_filter(self, client_token, data, is_token_valid, response, username) -> Any:
+    def delete_file(self, client_token, data, is_token_valid, response, username) -> Any:
         logging.debug("verb = DELETE_FILE")
         if is_token_valid:
             if self.file_service.delete_file(username, data[0], data[1]):
